@@ -7,39 +7,36 @@ with position converted to radians of beam rotation.
 """
 import pandas as pd
 import math
+import numpy as np
+from cavendish.utils.Functions import *
 
 
 def load_convert(path, sig_x = 0.002, num = 4 ):
-    """ Main function for dataloader.
-    position is converted to radians of beam rotation. Note that that means the values returned are *half* of the angle produced by the laser, since the law of reflection
+    """ Main function for dataloader. cleans unnecessary columns, splits into separate data frames, adds uncertainty, coverts to radians of beam rotation. 
+    Note that that means the values returned are *half* of the angle produced by the laser, since the law of reflection
     will double the angle between the laser rays.
 
     Args:
-        path (_str_): Path to the location of the .csv file containing measurements of time and position (x) in cm. 
-        
-
+        path (_str_): Path to the location of the .csv file containing measurements of time and position (x) in cm.
+    Kwargs:
+        sig_x (_float_): uncertainty in position measurement for each timepoint, assumed to be uniform across all observations.
+        num (_int_): number of seperate measurements to split the data into. assumed to be 4
     Returns:
         _list_: list of data arrays:  [data_aray1, data_aray2, data_array3 ....]
-            
             _data_array_: numoy array containing 3 collumns:
                 Time    | angle  | uncertainty in angle
-        
     """
     df = pd.read_csv(path, header=[0,1])
     dfs = clean_split(df, num, sig_x)
     convert_rad(dfs)
     return dfs
 
-
-    
-    
-
-
 def clean_split(df, num, sig_x):
     """takes in a dataframe, cleans it to keep only the Time (sec) and Position (cm) columns, and splits into 4 dataframes, one for each measurement. 
-    arguments:
-        df: dataframe to be cleaned and split
-        num: number of groups
+    Args:
+        df (_dataframe_): pandas dataframe to be cleaned and split
+        num (_int_): number of seperate measurements to split the data into. assumed to be 4
+        sig_x (_float_): uncertainty in position measurement for each timepoint, assumed to be uniform across all observations
     returns:
         List of dataframes, one for each measurement. 
     """
@@ -50,14 +47,16 @@ def clean_split(df, num, sig_x):
         _df.loc[:, (f"Measurement {i+1}", "Uncertainty (m)")] = sig_x
         print(_df.columns)
         _df.rename(columns={"Position (cm)": "Position (m)"}, level = 1, inplace = True)
-        _df.loc[:, _df.columns.get_level_values(1) == 'Position (m)'] /= 100
-        
-
-    
-    
+        _df.loc[:, _df.columns.get_level_values(1) == 'Position (m)'] /= 100    
     return dfs
-    
+
+
 def convert_rad(dfs):
+    """takes in a list of dataframes, and converts the collums of each from position to radians, based off of our measurements
+
+    Args:
+        dfs (_list_): list if pandas dataframes, one for each measurement
+    """
     for i, df in enumerate(dfs):
         measure = df.columns.get_level_values(0)[0]
         df[[(measure, "Radians"), (measure, "Uncertainty (rad)")]] = \
@@ -66,19 +65,3 @@ def convert_rad(dfs):
                     index=[(measure, "Radians"), (measure, "Uncertainty (rad)")]), axis = 1,)
         df.drop([(measure, "Position (m)"), (measure, "Uncertainty (m)")], axis = 1, inplace=True)
     return
-
-def con_rad(x):
-    r = sub_s(x)
-    theta = in_tan(r)
-    return (theta)
-
-
-    
-def sub_s(x,s=(1, 0.002)):
-    return (x[0]-s[0], x[1] + s[1])
-
-def in_tan(r, d=(8.5, 0.002)):
-    #note: also halves the angle, in order to give the angle of rotation the the pendulum, rather than the angle reflected. 
-    theta = math.atan(r[0]/d[0])/2
-    sig_theta = r[1]/2
-    return (theta, sig_theta)
