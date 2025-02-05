@@ -33,30 +33,146 @@ def con_rad(x):
     """\
     #mathematical composed function to convert from position to radians
     #takes tuples of (value, uncertainty) 
-    r = sub_s(x)
+    r = Pos(x)
     theta = in_tan(r)
     return (theta)
 
-def sub_s(x,s=(1, 0.002)):
-    #takes tuples of (value, uncertainty) 
-    return (x[0]-s[0], x[1] + s[1])
-
-def in_tan(r, d=(6.6, 0.002)): #needs fixing once we get uncertainty expression
-    #takes tuples of (value, uncertainty) 
-    #note: also halves the angle, in order to give the angle of rotation the the pendulum, rather than the angle reflected. 
-    theta = math.atan(r[0]/d[0])/2
-    top1 = (r[0]**2)*(d[1]**2)
-    top2 = (d[0]**2)*(r[1]**2)
-    bot = 4*(r[0]**2 + d[0]**2)**2
-    sig_theta = np.sqrt((top1+top2)/bot)
-    return (theta, sig_theta)
-
-
-def I_beam(mb, lb, wb):
-    """calculates Moment of inertia for the beam
-
-    Args:
-        mb (tuple): mass of the beam
-        lb (tuple): length of beam
-        wb (tuple): width of beam
+def Pos(x, s):
     """
+    Computes the position relative to a shift and propagates uncertainty.
+
+    Parameters:
+        x, s: Tuples of the form (value, uncertainty).
+        x: position we measure
+        s: "center" of the ruler we measured on
+    
+    Returns:
+        A tuple (pos, sigma_pos) where:
+        - pos is the computed position.
+        - sigma_pos is the propagated uncertainty.
+    """
+    # Extract values and uncertainties
+    x_val, sigma_x = x
+    s_val, sigma_s = s
+
+    # Compute the function value
+    pos = x_val - s_val
+
+    # Compute the propagated uncertainty
+    sigma_pos = np.sqrt(sigma_x**2 + sigma_s**2)
+
+    return (pos, sigma_pos)
+
+
+def Theta(r, l=(6.6, 0.002)):
+    """
+    Computes Theta as ArcTan(r/l)/2 and propagates uncertainty.
+    Note: gives *half* the angle on the ruler, since the law of reflection doubles the actual angle of the beam
+
+    Parameters:
+        r, l: Tuples of the form (value, uncertainty).
+        r: the position relative to the center of the ruler
+        l: distance from device to the wall
+    Returns:
+        A tuple (theta, sigma_theta) where:
+        - theta is the computed angle.
+        - sigma_theta is the propagated uncertainty.
+    """
+    # Extract values and uncertainties
+    r_val, sigma_r = r
+    l_val, sigma_l = l
+
+    # Compute the function value
+    theta = 0.5 * np.arctan(r_val / l_val)
+
+    # Compute the propagated uncertainty
+    denom = 4 * (1 + (r_val / l_val))**2 * l_val**2
+    sigma_theta = np.sqrt((sigma_r**2 / denom) + ((r_val**2 * sigma_l**2) / (denom * l_val**2)))
+
+    return (theta, sigma_theta)
+
+
+def I_beam(m, l, w):
+    """
+    Computes the moment of inertia for an I-beam and propagates uncertainty.
+
+    Parameters:
+        m, l, w: Tuples of the form (value, uncertainty).
+        
+        m (tuple): mass of the beam
+        l (tuple): length of beam
+        w (tuple): width of beam
+    Returns:
+        A tuple (I, sigma_I) where:
+        - I is the computed moment of inertia.
+        - sigma_I is the propagated uncertainty.
+    """
+    # Extract values and uncertainties
+    m_val, sigma_m = m
+    l_val, sigma_l = l
+    w_val, sigma_w = w
+
+    # Compute the function value
+    I = m_val * (1/12) * (l_val**2 + w_val**2)
+
+    # Compute the propagated uncertainty
+    term1 = (1/144) * (l_val**2 + w_val**2)**2 * sigma_m**2
+    term2 = (1/36) * m_val**2 * l_val**2 * sigma_l**2
+    term3 = (1/36) * m_val**2 * w_val**2 * sigma_w**2
+
+    sigma_I = np.sqrt(term1 + term2 + term3)
+
+    return (I, sigma_I)
+
+def ISpheres(m, dss, d):
+    """
+    Computes the moment of inertia for two spheres and propagates uncertainty.
+
+    Parameters:
+        m, dss, d: Tuples of the form (value, uncertainty).
+    
+    Returns:
+        A tuple (I, sigma_I) where:
+        - I is the computed moment of inertia.
+        - sigma_I is the propagated uncertainty.
+    """
+    # Extract values and uncertainties
+    m_val, sigma_m = m
+    dss_val, sigma_dss = dss
+    d_val, sigma_d = d
+
+    # Compute the function value
+    I = 2 * m_val * ((2/5) * (dss_val / 2)**2 + d_val**2)
+
+    # Compute the propagated uncertainty
+    term1 = 4 * ((dss_val**2 / 10) + d_val**2)**2 * sigma_m**2
+    term2 = (4/25) * m_val**2 * dss_val**2 * sigma_dss**2
+    term3 = 16 * m_val**2 * d_val**2 * sigma_d**2
+
+    sigma_I = np.sqrt(term1 + term2 + term3)
+
+    return (I, sigma_I)
+
+def Itotal(Ib, Is):
+    """
+    Computes the total moment of inertia and propagates uncertainty.
+
+    Parameters:
+        Ib, Is: Tuples of the form (value, uncertainty).
+    
+    Returns:
+        A tuple (I_total, sigma_I_total) where:
+        - I_total is the computed total moment of inertia.
+        - sigma_I_total is the propagated uncertainty.
+    """
+    # Extract values and uncertainties
+    Ib_val, sigma_Ib = Ib
+    Is_val, sigma_Is = Is
+
+    # Compute the function value
+    I_total = Ib_val + Is_val
+
+    # Compute the propagated uncertainty
+    sigma_I_total = np.sqrt(sigma_Ib**2 + sigma_Is**2)
+
+    return (I_total, sigma_I_total)
