@@ -159,7 +159,7 @@ def Itotal(Ib, Is):
 
     Parameters:
         Ib, Is: Tuples of the form (value, uncertainty).
-    
+        Ib
     Returns:
         A tuple (I_total, sigma_I_total) where:
         - I_total is the computed total moment of inertia.
@@ -176,3 +176,4 @@ def Itotal(Ib, Is):
     sigma_I_total = np.sqrt(sigma_Ib**2 + sigma_Is**2)
 
     return (I_total, sigma_I_total)
+
