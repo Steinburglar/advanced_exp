@@ -11,7 +11,7 @@ import numpy as np
 from cavendish.utils.Functions import *
 
 
-def load_convert(path, sig_x = 0.002, num = 4 ):
+def load_convert(path, sig_x = 0.001, num = 4 ):
     """ Main function for dataloader. cleans unnecessary columns, splits into separate data frames, adds uncertainty, coverts to radians of beam rotation. 
     Note that that means the values returned are *half* of the angle produced by the laser, since the law of reflection
     will double the angle between the laser rays.
@@ -41,11 +41,11 @@ def clean_split(df, num, sig_x):
         List of dataframes, one for each measurement. 
     """
     df = df.loc[:, pd.IndexSlice[:, ["Time (sec)", "Position (cm)"]]]
+    df =df.dropna()
     dfs = [df.loc[:, pd.IndexSlice[f"Measurement {i}", :]].copy() for i in range(1, num+1)]
     del df #for memory
     for i, _df in enumerate(dfs):
         _df.loc[:, (f"Measurement {i+1}", "Uncertainty (m)")] = sig_x
-        print(_df.columns)
         _df.rename(columns={"Position (cm)": "Position (m)"}, level = 1, inplace = True)
         _df.loc[:, _df.columns.get_level_values(1) == 'Position (m)'] /= 100    
     return dfs
