@@ -11,7 +11,7 @@ import numpy as np
 from cavendish.utils.Functions import *
 
 
-def load_convert(path, sig_x = 0.001, num = 4 ):
+def load_convert(path, sig_x = 0.0005, num = 4 ):
     """ Main function for dataloader. cleans unnecessary columns, splits into separate data frames, adds uncertainty, coverts to radians of beam rotation. 
     Note that that means the values returned are *half* of the angle produced by the laser, since the law of reflection
     will double the angle between the laser rays.
@@ -22,8 +22,8 @@ def load_convert(path, sig_x = 0.001, num = 4 ):
         sig_x (_float_): uncertainty in position measurement for each timepoint, assumed to be uniform across all observations.
         num (_int_): number of seperate measurements to split the data into. assumed to be 4
     Returns:
-        _list_: list of data arrays:  [data_aray1, data_aray2, data_array3 ....]
-            _data_array_: numoy array containing 3 collumns:
+        _list_: list of data arrays:  [data_array1, data_array2, data_array3 ....]
+            _data_array_: numpy array containing 3 collumns:
                 Time    | angle  | uncertainty in angle
     """
     df = pd.read_csv(path, header=[0,1])
