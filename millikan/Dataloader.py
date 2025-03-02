@@ -38,24 +38,45 @@ def load_velocity_data(csv_path):
 
     return velocity_data
 
-def load_convert(path, num = 11):
-    """ Main function for dataloader. cleans unnecessary columns, splits into separate data frames, adds uncertainty, coverts to radians of beam rotation. 
-    Note that that means the values returned are *half* of the angle produced by the laser, since the law of reflection
-    will double the angle between the laser rays.
+def main_dataframe(vel_path, volt_path):
+    """main function of data loader. Loads and cleans velocities with load_velocity_data. then uses these velocities to populate a 2d dataframe with entries for each droplet.
+    
+    
 
     Args:
-        path (_str_): Path to the location of the .csv file containing measurements of time and position (x) in cm.
-    Kwargs:
-        sig_x (_float_): uncertainty in position measurement for each timepoint, assumed to be uniform across all observations.
-        num (_int_): number of seperate measurements to split the data into. assumed to be 4
-    Returns:
-        _list_: list of data arrays:  [data_array1, data_array2, data_array3 ....]
-            _data_array_: numpy array containing 3 collumns:
-                Time    | angle  | uncertainty in angle
+        vel_path (): _description_
+        volt_path (_type_): _description_
     """
-    df = pd.read_csv(path, header=[0,1], index_col="BBL"+str())
+
+    bbl_dict = load_velocity_data(vel_path)
+    df = init_df(bbl_dict, volt_path)
+    
+
+
+def init_df(bbl_dict, volt_path):
+    """initializes and builds the first phase of the dataframe containing droplets as rows, and relevant data as collumns. does NOT do any calculations of charge or temperature. 
+
+    Args:
+        bbl_dict (_dict_): nested dictionary of BBl's and their drops. Should be taken as the output of load_velocity_data. Note: drops are ordered cumulatively,
+        so the first drop in BBL 2 is named "drop 8", and so on
+        volt_path (_type_): path the the csv containing voltage and resistance measurement for each BBL
+
+    Returns:
+        _DataFrame_: and Pandas dataframe with one row per droplet, named "drop N", and columns for the initial data. 
+    """
+    df = pd.DataFrame(columns=["v_rise", "sigma_v_rise", "v_fall", "sigma_v_fall", "Volts", "sigma_Volts", "resistance"])
+    volt_df = pd.read_csv(volt_path)
+    for bbl, drops in bbl_dict.items():
+        bblV = bbl + "V"
+        bblR = bbl + "R"
+        V_low = volt_df[bblV][0]
+        V_hi = volt_df[bblV][1]
+        V_mean = np.mean([V_low, V_hi])
+        sigV = (V_hi-V_low)/2
+        Res = np.mean([volt_df[bblR][0], volt_df[bblR][1]])
+        for drop, velocities in drops.items():
+            (v_rise, sigma_v_rise), (v_fall, sigma_v_fall) = process_droplet_velocities(velocities)
+            df.loc[drop] = [v_rise, sigma_v_rise, v_fall, sigma_v_fall, V_mean, sigV, Res]     
+    df = df.dropna()
     
     return df
-
-
-

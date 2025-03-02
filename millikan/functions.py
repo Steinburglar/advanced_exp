@@ -41,10 +41,15 @@ def process_droplet_velocities(velocities):
     def compute_mean_stddev(data):
         if len(data) == 0:
             return (None, None)  # Return None if no valid data remains
-        return (np.mean(data), np.std(data, ddof=1))  # ddof=1 for sample std dev
+        return (np.mean(data), 2*np.std(data, ddof=1))  # ddof=1 for sample std dev
 
     # Compute mean and standard deviation for rising and falling droplets
     rise_stats = compute_mean_stddev(v_rise_trimmed)
     fall_stats = compute_mean_stddev(v_fall_trimmed)
+    if rise_stats == (None, None):
+        print("Droplet found without enough values")
 
     return rise_stats, fall_stats
+
+
+
