@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from scipy.signal import find_peaks
+from scipy.optimize import curve_fit
 import millikan.Dataloader as dl
 from millikan.functions import *
 
@@ -54,9 +55,9 @@ def bin_charges(q, sigma_q, bin_edges):
     q = np.array(q)
     sigma_q = np.array(sigma_q)
 
-    # Assign each charge value to a bin based on the bin edges
-    bin_indices = np.digitize(q, bins=bin_edges, right=False)  
-
+    # Use pd.cut to assign each charge value to a bin
+    bin_indices = pd.cut(q, bins=bin_edges, labels=False, right=False) #right=False to make bin edges inclusive
+    
     # Create a DataFrame for easy weighted averaging later
     df = pd.DataFrame({'charge': q, 'sigma_charge': sigma_q, 'bin': bin_indices})
 
@@ -71,3 +72,50 @@ def weighted_average(df):
         return pd.Series({'mean_charge': weighted_mean, 'sigma_mean': weighted_sigma})
 
     return df.groupby("bin").apply(w_avg).reset_index()
+
+def linear_fit(bin_means):
+    """
+    Performs a linear regression on the binned charge data.
+
+    Args:
+        bin_means (DataFrame): DataFrame with columns ['bin', 'mean_charge', 'sigma_mean']
+
+    Returns:
+        tuple: (slope, intercept, slope_error, intercept_error)
+    """
+    x_data = bin_means["bin"]  # Bin indices (or centers if preferred)
+    y_data = bin_means["mean_charge"]
+    sigma_y = bin_means["sigma_mean"]  # Use uncertainties as weights
+
+    # Define linear model
+    def linear(x, m, b):
+        return m * x + b
+
+    # Perform weighted least squares fit
+    popt, pcov = curve_fit(linear, x_data, y_data, sigma=sigma_y, absolute_sigma=True)
+
+    # Extract parameters and uncertainties
+    slope, intercept = popt
+    slope_error, intercept_error = np.sqrt(np.diag(pcov))
+
+    return slope, intercept, slope_error, intercept_error
+
+
+def plot_binned_data(bin_means, slope, intercept):
+    """
+    Plots the binned charge data along with the linear regression fit.
+
+    Args:
+        bin_means (DataFrame): DataFrame with columns ['bin', 'mean_charge', 'sigma_mean']
+        slope (float): Slope of the linear fit
+        intercept (float): Intercept of the linear fit
+    """
+    plt.errorbar(bin_means["bin"], bin_means["mean_charge"], yerr=bin_means["sigma_mean"], fmt='o', mfc='none',label="Binned Data")
+    x_fit = np.linspace(min(bin_means["bin"]), max(bin_means["bin"]), 100)
+    plt.plot(x_fit, slope * x_fit + intercept, label="Linear Fit", linestyle="--")
+    
+    plt.xlabel("Bin Index")
+    plt.ylabel("Mean Charge")
+    plt.legend()
+    plt.title("Linear Fit to Binned Charge Data")
+    plt.show()
