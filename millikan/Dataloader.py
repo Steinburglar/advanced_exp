@@ -109,3 +109,18 @@ def expand_df(df):
     df[["q", "sigma_q"]] = df.apply(calculate_charge, axis = 1, result_type = "expand")
     
     return df
+
+def load_class_charges(class_path):
+    """loads class data as a dataframe, extracts charges and uncertainty in charges. 
+
+    Args:
+        class_path (str): path to class csv from sliwa
+    """
+    # Load only the first two columns
+    df = pd.read_csv(class_path, usecols=[0, 1], header=None,  names=["q", "sigma_q"])
+
+    # Convert to NumPy arrays
+    q = df["q"].to_list()
+    sigma_q = df["sigma_q"].to_list()
+    
+    return(q, sigma_q)
