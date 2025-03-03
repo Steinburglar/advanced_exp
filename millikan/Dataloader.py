@@ -9,6 +9,7 @@ import pandas as pd
 import math
 import numpy as np
 from cavendish.utils.Functions import *
+from millikan.functions import *
 
 def load_velocity_data(csv_path):
     """
@@ -50,6 +51,8 @@ def main_dataframe(vel_path, volt_path):
 
     bbl_dict = load_velocity_data(vel_path)
     df = init_df(bbl_dict, volt_path)
+    df = expand_df(df)
+    return df
     
 
 
@@ -78,5 +81,31 @@ def init_df(bbl_dict, volt_path):
             (v_rise, sigma_v_rise), (v_fall, sigma_v_fall) = process_droplet_velocities(velocities)
             df.loc[drop] = [v_rise, sigma_v_rise, v_fall, sigma_v_fall, V_mean, sigV, Res]     
     df = df.dropna()
+    
+    return df
+
+def expand_df(df):
+    """function to fill in the calculated and extra nformation for each drop in the main dataframe. 
+
+    Args:
+        df (_DataFrame_): dataframe containing a row for each drop, and initialized with some already existing columns. should be made by init_df
+    """
+
+    df["Temperature"]=293
+    df["pressure"]= 101325 #get real pressure value
+    df[["spacing", "sigma_spacing"]]= [0.03, 0.001] #need to add actual spacing
+    df[["Efield", "sigma_Efield"]] = df.apply(
+        lambda row: efield((row["Volts"], row["sigma_Volts"]), (row["spacing"], row["sigma_spacing"])), 
+        axis=1, result_type="expand"
+    )
+    df[["viscosity", "sigma_viscosity"]] = df.apply(lambda row: viscosity((row["Temperature"], 0)), axis = 1, result_type="expand")
+
+    def calculate_charge(row):
+        """small function put together functions that serve to calculate A. this is designed to be used by df.apply()"""
+        a_ = a_a((row["viscosity"], row["sigma_viscosity"]))
+        q, sigma_q = Q((row["v_fall"], row["sigma_v_fall"]), (row["v_rise"], row["sigma_v_rise"]), (row["Efield"], row["sigma_Efield"]), (row["pressure"], 0), (row["viscosity"], row["sigma_viscosity"]), 8.2*(10**-3))
+        return (q, sigma_q)
+
+    df[["q", "sigma_q"]] = df.apply(calculate_charge, axis = 1, result_type = "expand")
     
     return df
