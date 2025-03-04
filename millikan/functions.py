@@ -181,3 +181,21 @@ def efield(V, d):
     sigma_E = np.sqrt((sigma_V / d_val) ** 2 + ((V_val * sigma_d) / d_val ** 2) ** 2)
     
     return E_val, sigma_E
+
+def resistance_to_temperature(resistance, resistance_values, temperature_values):
+    '''
+    # Example usage:
+    Temp = [10,11,12,13,14,15,16,17,18,19,20,21,22]
+    Resistance = [3.239,3.118,3.004,2.897,2.795,2.700,2.610,2.526,2.446,2.371,2.300,2.233,2.169]
+
+    for i in range(len(r)):
+        resistance_input = r[i]
+        temperature_output = resistance_to_temperature(r[i], Resistance, Temp)
+        print(f"Estimated temperature for BBL {str(i+1)}: {temperature_output:.2f}°C")
+    
+    BBL8 = BBL9
+    BBL9 = BBL10
+    BBL10 = BBL11
+    BBL11 = BBL12
+    '''
+    return np.interp(resistance, resistance_values[::-1], temperature_values[::-1])

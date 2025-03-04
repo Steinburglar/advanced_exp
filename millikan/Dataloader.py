@@ -39,6 +39,22 @@ def load_velocity_data(csv_path):
 
     return velocity_data
 
+def load_RV_data(csv_path):
+    """
+    Loads velocity data from a CSV file into a nested dictionary.
+    
+    Args:
+        csv_path (str): Path to the CSV file.
+        
+    Returns:
+        dict: Nested dictionary with BBL as keys, Drop numbers as subkeys, and lists of velocities as values.
+    """
+    df = pd.read_csv(csv_path, header=[0])  # Read with two header rows
+
+    
+
+    return df
+
 def main_dataframe(vel_path, volt_path):
     """main function of data loader. Loads and cleans velocities with load_velocity_data. then uses these velocities to populate a 2d dataframe with entries for each droplet.
     
