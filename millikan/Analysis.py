@@ -18,8 +18,8 @@ def ideogram(q, sigma_q):
     """creates an ideogram for an array of charges and their uncertainties.
 
     Args:
-        q (list): list of droplet charges
-        sigma_q (list): corresponding list of droplet charge uncertainties_
+        q (np.array): list of droplet charges
+        sigma_q (np.array): corresponding list of droplet charge uncertainties_
     """
     range_q = np.max(q) - np.min(q)
     buffer = 0.2 #fraction of range to use as buffer for plot

@@ -120,7 +120,7 @@ def load_class_charges(class_path):
     df = pd.read_csv(class_path, usecols=[0, 1], header=None,  names=["q", "sigma_q"])
 
     # Convert to NumPy arrays
-    q = df["q"].to_list()
-    sigma_q = df["sigma_q"].to_list()
+    q = df["q"].to_numpy()
+    sigma_q = df["sigma_q"].to_numpy()
     
     return(q, sigma_q)
