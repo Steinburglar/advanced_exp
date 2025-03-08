@@ -35,7 +35,7 @@ def load_velocity_data(csv_path):
         bbl_columns = df[bbl]
         
         for drop in bbl_columns.columns:  # Second-level headers
-            velocity_data[bbl][drop] = bbl_columns[drop].dropna().tolist()  # Store non-null values
+            velocity_data[bbl][drop] = bbl_columns[drop].dropna().to_numpy()*(10**-2)# Store non-null values, cm to meters correction included here
 
     return velocity_data
 
@@ -107,9 +107,9 @@ def expand_df(df):
         df (_DataFrame_): dataframe containing a row for each drop, and initialized with some already existing columns. should be made by init_df
     """
 
-    df["Temperature"]=293
-    df["pressure"]= 101325 #get real pressure value
-    df[["spacing", "sigma_spacing"]]= [0.03, 0.001] #need to add actual spacing
+    df["Temperature"]= df.apply(lambda row: resistance_to_temperature((row["resistance"])), axis = 1, result_type="expand")
+    df["pressure"]= inches_to_pascals(30.28)
+    df[["spacing", "sigma_spacing"]]= [0.00768, 0.001] #need to add actual spacing uncertainty
     df[["Efield", "sigma_Efield"]] = df.apply(
         lambda row: efield((row["Volts"], row["sigma_Volts"]), (row["spacing"], row["sigma_spacing"])), 
         axis=1, result_type="expand"

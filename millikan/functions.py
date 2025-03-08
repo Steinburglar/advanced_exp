@@ -182,7 +182,8 @@ def efield(V, d):
     
     return E_val, sigma_E
 
-def resistance_to_temperature(resistance, resistance_values, temperature_values):
+def resistance_to_temperature(resistance, resistance_values=[3.239,3.118,3.004,2.897,2.795,2.700,2.610,2.526,2.446,2.371,2.300,2.233,2.169],
+                            temperature_values = [10,11,12,13,14,15,16,17,18,19,20,21,22]):
     '''
     # Example usage:
     Temp = [10,11,12,13,14,15,16,17,18,19,20,21,22]
@@ -198,4 +199,13 @@ def resistance_to_temperature(resistance, resistance_values, temperature_values)
     BBL10 = BBL11
     BBL11 = BBL12
     '''
+    temperature_values = np.array(temperature_values)+273.15
     return np.interp(resistance, resistance_values[::-1], temperature_values[::-1])
+
+
+def inches_to_pascals(inches):
+    # Conversion factor
+    conversion_factor = 3386.39
+    # Convert inches of mercury to pascals
+    pascals = inches * conversion_factor
+    return pascals
