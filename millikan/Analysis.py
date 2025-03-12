@@ -40,6 +40,33 @@ def ideogram(q, sigma_q):
     return minima_x
 
 
+def prune_data(charges, sigma_charges, threshold):
+    pruned_charges = []
+    pruned_sigma_charges = []
+
+    for charge, sigma_charge in zip(charges, sigma_charges):
+        fractional_error = sigma_charge / charge
+        if fractional_error <= threshold:
+            pruned_charges.append(charge)
+            pruned_sigma_charges.append(sigma_charge)
+
+    return np.array(pruned_charges), np.array(pruned_sigma_charges)
+
+def plot_fractional_error(q, sigma_q, threshold=0.06):
+    """plots fractional error in charge as a function of charge value on a log-linear scale.
+        it also plots a horizontal line at 1% error for reference, and to help separate the data into two categories.
+    Args:
+        q (_type_): _description_
+        sigma_q (_type_): _description_
+    """ 
+    plt.scatter(q, sigma_q/q)
+    plt.axhline(threshold, color='red', linestyle='--', label="1% Error")
+    plt.yscale('log')
+    plt.xlabel("Charge")
+    plt.ylabel("Fractional Error")
+    plt.title("Fractional Error in Charge vs. Charge")
+    plt.show()
+    
 def bin_charges(q, sigma_q, bin_edges):
     """
     Bins charge values into custom-defined clusters and prepares the data for weighted averaging.

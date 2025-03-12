@@ -1,9 +1,7 @@
 """
 Lucas Steinberger
 1/31/2025
-Python script containing  functions to for loading and converting data from Casey, Lucas, and Cooke's Cavendish lab in PHYS 064.
-Goal is to provide utility to load csv and return 4 arrays, each containing the data points with corresponding uncertainties for a measurement,
-with position converted to radians of beam rotation.
+Python script containing  functions to for loading and converting data from Casey, Lucas, and Cooke's Millikan lab in PHYS 064.
 """
 import pandas as pd
 import math
