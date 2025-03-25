@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+import math
 
 def process_droplet_velocities(velocities):
     """cleans velocity data by fiding average rising and falling velocities, using standard deviation as uncertainty.
@@ -209,3 +210,180 @@ def inches_to_pascals(inches):
     # Convert inches of mercury to pascals
     pascals = inches * conversion_factor
     return pascals
+
+def velocity(y, t):
+    """
+    Computes the velocity and its propagated uncertainty.
+    
+    Parameters:
+    y (tuple): (value of distance, uncertainty in distance)
+    t (tuple): (value of time, uncertainty in time)
+    *NOTE: uncertainty in time is assumed to be zero
+    
+    Returns:
+    tuple: (velocity value, propagated uncertainty)
+    """
+    y_val, sig_y = y
+    t_val, sig_t = t, 0
+    
+    # Compute velocity value
+    v_val = y_val / t_val
+    
+    # Compute uncertainty propagation
+    sigma_v = sig_y / t_val
+    
+    return v_val, sigma_v
+
+
+def drop_charge_and_uncertainty(Efield, Vfall, Vrise, eta, pressure, rho=886, g=9.81, b=8.2*(10**-3) ):
+    """
+    Compute the drop-charge value Q and its uncertainty errQ.
+
+    According to your latest formula, we consider uncertainties only in:
+      - Vfall
+      - Vrise
+      - Efield
+    and treat the uncertainties in b, eta, rho, g, pressure as negligible.
+
+    Parameters
+    ----------
+    Efield : float or (float, float)
+        Electric field, possibly (value, sigma_E)
+    Vfall  : float or (float, float)
+        Fall velocity, possibly (value, sigma_Vfall)
+    Vrise  : float or (float, float)
+        Rise velocity, possibly (value, sigma_Vrise)
+    b      : float
+        Correction constant b (assumed negligible uncertainty here)
+    eta    : float
+        Viscosity of the fluid (assumed negligible uncertainty)
+    rho    : float
+        Density of the fluid (assumed negligible uncertainty)
+    g      : float
+        Acceleration due to gravity (assumed negligible uncertainty)
+    pressure : float
+        Ambient pressure (assumed negligible uncertainty)
+
+    Returns
+    -------
+    (Q, errQ) : (float, float)
+        Q     = central drop-charge value
+        errQ  = uncertainty in Q, based on partial derivatives w.r.t.
+                Vfall, Vrise, and Efield only, per the provided formula.
+    """
+
+    # Helper to parse input as (value, sigma). If only a float is given,
+    # we treat sigma=0.0.
+    def parse_input(x):
+        if isinstance(x, tuple):
+            return x[0], x[1]
+        else:
+            return x, 0.0
+
+    # Parse only the three that have non-negligible uncertainties:
+    E_val,   E_sig   = parse_input(Efield)
+    Vf_val,  Vf_sig  = parse_input(Vfall)
+    Vr_val,  Vr_sig  = parse_input(Vrise)
+
+    # The rest are floats with negligible uncertainty:
+    b_val       = b
+    eta_val     = eta
+    rho_val     = rho
+    g_val       = g
+    pressure_val= pressure
+
+    #--------------------------------------------------------------------------
+    # 1) Compute central value of Q.
+    #
+    #    Q = (6 π / E) * (Vfall + Vrise) * sqrt(Vfall)
+    #         * sqrt( 9 η^3 / (2 ρ g) )
+    #         * [ 1 / ( 1 + b / (P sqrt(9 Vfall η / (2 ρ g))) ) ]^(3/2)
+    #--------------------------------------------------------------------------
+    numerator  = 6.0 * math.pi / E_val
+    factor1    = (Vf_val + Vr_val)
+    factor2    = math.sqrt(Vf_val)
+    factor3    = math.sqrt(9.0 * (eta_val**3) / (2.0 * rho_val * g_val))
+    denom_inner= 1.0 + b_val / (
+        pressure_val * math.sqrt(9.0 * Vf_val * eta_val / (2.0 * rho_val * g_val))
+    )
+    factor4    = (1.0 / denom_inner)**1.5
+
+    Q = numerator * factor1 * factor2 * factor3 * factor4
+
+    #--------------------------------------------------------------------------
+    # 2) Compute uncertainty errQ based on your new (shorter) formula:
+    #
+    #   errQ = sqrt(
+    #      [ (∂Q/∂Vfall) ]^2 * (errVfall)^2
+    #    + [ (∂Q/∂Vrise) ]^2 * (errVrise)^2
+    #    + [ (∂Q/∂Efield)]^2 * (errEfield)^2
+    #   )
+    #
+    # where the partial derivatives are exactly as in your provided expression:
+    #
+    #   errQ = sqrt(  [ ( ... )^2 * errVfall^2 ]
+    #               + [ ( ... )^2 * errVrise^2 ]
+    #               + [ ( ... )^2 * errEfield^2 ]  )
+    #
+    # and the big bracketed expressions are the partial derivatives from
+    # your Mathematica snippet. We'll just replicate them carefully.
+    #--------------------------------------------------------------------------
+    # Make short references for readability:
+    Vf   = Vf_val
+    Vr   = Vr_val
+    E    = E_val
+    b_   = b_val
+    et   = eta_val
+    rh   = rho_val
+    gg   = g_val
+    P    = pressure_val
+
+    # Common sub-expressions to reduce repetition:
+    sqrtVf = math.sqrt(Vf)
+    big_sqrt_factor = math.sqrt((et**3) * (1.0/(
+        1.0 + (math.sqrt(2)*b_)/(3.0 * P * math.sqrt((Vf * et)/(gg * rh)))
+    ))**1.5 / (gg * rh))
+
+    # partial wrt Vfall (the big bracket in front of errVfall^2):
+    partial_vfall = (
+        ( 9*math.sqrt(2)*math.pi * sqrtVf * big_sqrt_factor )/E
+        + (
+            9*math.pi*(Vf + Vr)*big_sqrt_factor
+        )/( math.sqrt(2)*E*math.sqrt(Vf) )
+        + (
+            9*b_*math.pi * math.sqrt(Vf)*(Vf + Vr)* (et**4)
+            *(1.0/(1.0 + (math.sqrt(2)*b_)/(
+                3.0*P*math.sqrt((Vf*et)/(gg*rh)))
+             ))**2.5
+        ) / (
+            4.0*E*(gg**2)*P*((Vf*et)/(gg*rh))**1.5 *
+            math.sqrt((et**3)*(1.0/(
+                1.0 + (math.sqrt(2)*b_)/(
+                    3.0*P*math.sqrt((Vf*et)/(gg*rh))
+                )
+            ))**1.5 / (gg*rh)) * (rh**2)
+        )
+    )
+
+    # partial wrt Vrise (the next bracket):
+    partial_vrise = (
+        ( 9*math.sqrt(2)*math.pi * math.sqrt(Vf) * big_sqrt_factor )/ E
+    )
+
+    # partial wrt Efield (the last bracket):
+    partial_efield = (
+       -(
+         ( 9*math.sqrt(2)*math.pi * math.sqrt(Vf) * (Vf + Vr) * big_sqrt_factor )
+         /( E**2 )
+       )
+    )
+
+    # Now assemble them into the error formula:
+    errQ = math.sqrt(
+        (partial_vfall  ** 2) * (Vf_sig**2) +
+        (partial_vrise  ** 2) * (Vr_sig**2) +
+        (partial_efield ** 2) * (E_sig **2)
+        # If you later want to account for b_sig, just add a + (...)^2 * b_sig^2
+    )
+
+    return Q, errQ
