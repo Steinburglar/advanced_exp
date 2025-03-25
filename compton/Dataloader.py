@@ -17,6 +17,6 @@ def load_gamma_count(csv_path):
     
     # df = pd.read_csv(csv_path, header=6, skiprows=[0,1,2,3,4,5], usecols=[0,1,2])
     
-    df = pd.read_csv(csv_path, skiprows=6, names=["Channel", "Energy (keV)", "Counts"])
+    df = pd.read_csv(csv_path, skiprows=7, names=["Channel", "Energy (keV)", "Counts"])
     
     return df
