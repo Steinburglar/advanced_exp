@@ -28,18 +28,18 @@ def plot_all(dfs, mins,):
         
 def plot_all_S1_fits(dfs):
     #plots all the fits from the dataframe
-    rows= []
+    #used to also return the peaks, but that was removed to prevent confusion. data returning functionality is provided in run_all_S1_fits
     for i, angle in enumerate(range(0, 140, 10)):
-        mean, sigma = plot_guassian_fit(dfs[i], i, angle)
-        rows.append({"Angle": angle, "Mean": mean, "Sigma": sigma})
-    peaks = pd.DataFrame(rows)
+        plot_guassian_fit(dfs[i], i, angle)
     
 def run_all_S1_fits(dfs):
     #runs all the fits from the dataframe
     rows= []
     for i, df in enumerate(dfs):
-        _, mean, sigma = guassian_fit(df, i, i*10)
-        rows.append({"Angle": i*10, "Mean": mean, "Sigma": sigma})
+        popt, pcov = guassian_fit(df, i, i*10)
+        mean, sigma = popt[1], popt[2]
+        Unc_mean, Unc_sigma = np.diag(pcov)[1:3]
+        rows.append({"Angle": i*10, "Mean": mean, "Sigma": sigma, "Unc Mean": Unc_mean, "Unc Sigma": Unc_sigma})
     peaks = pd.DataFrame(rows)
     return peaks
 def trim_S1_dfs(dfs, mins):
@@ -49,17 +49,25 @@ def trim_S1_dfs(dfs, mins):
         trimmed.append(df[df["Energy (keV)"] > mins[i]])
     return trimmed
 
-def guassian_fit(df, i=None, angle=None):
-    #fits a guassian to the data
+def trim_df(df, min_energy, max_energy=None):
+    #trims the dataframe to the minimum energy
+    if max_energy is None:
+        return df[df["Energy (keV)"] > min_energy]
+    else:
+        return df[(df["Energy (keV)"] > min_energy) & (df["Energy (keV)"] < max_energy)]
+
+def guassian_fit(df, i=0, angle=0):
+    #fits a guassian to the data, returns parameters and cov matrix
     mins = minimum_energy_S1()
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
     popt, pcov = curve_fit(gaussian, energy, counts, p0=[safe_divide(30000, angle), mins[i]+ 50, 100])
-    return popt
+    return popt, pcov
 
 def plot_guassian_fit(df, i=None, angle=None):
-    #plots the guassian fit, returns the mean and sigma
-    popt = guassian_fit(df, i, angle)
+    #plots the guassian fit
+    #used to return data, now does not, as to prevent confusion. That was moved to run_all_S1_fits
+    popt, pcov= guassian_fit(df, i, angle)
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
     plt.plot(energy, counts, label=f"A{angle}")
@@ -69,7 +77,6 @@ def plot_guassian_fit(df, i=None, angle=None):
     plt.ylabel("Counts")
     plt.legend()
     plt.show()
-    return popt[1], popt[2]
 
 def minimum_energy_S1():
     #returns handmade list of reasonable energy cutoffs to enable fits. note: only for S1 runs

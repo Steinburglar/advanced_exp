@@ -20,3 +20,17 @@ def load_gamma_count(csv_path):
     df = pd.read_csv(csv_path, skiprows=7, names=["Channel", "Energy (keV)", "Counts"])
     
     return df
+
+def expand_df(df, E, sig_E):
+    """expands a dataframe to calculate the values of interest for linear regression, namely E/E', corresponding uncertainty in E/E',
+    and 1/cos(theta).
+
+    Args:
+        df (_type_): Dataframe containing following collumns: Angle, Mean, Sigma, Unc Mean, Unc Sigma
+        E (float): Value of peak energy taken by fitting a guassian to the A0_S0 baseline run 
+        sig_E (float): Uncertainty in E, as reported by curve_fit
+    """
+    df["E/E'"] = df["Mean"]/E
+    df["Unc E/E'"] = np.sqrt((df["Unc Mean"]/E)**2 + (df["Mean"]*sig_E/(E**2))**2)
+    df["1/cos(theta)"] = 1/np.cos(np.radians(df["Angle"]))
+    return df

@@ -26,3 +26,6 @@ def safe_divide(numerator, denominator):
         return numerator / 1
     else:
         return numerator / denominator
+    
+def logistic_function(x, a, b, c, d):
+    return a / (1 + np.exp(-c * (x - d))) + b
