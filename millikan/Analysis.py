@@ -136,7 +136,7 @@ def weighted_average(df):
     return grouped
 
 
-def linear_fit(bin_means):
+def linear_fit(bin_means, max_bin=None):
     """
     Performs a linear regression on the binned charge data.
 
@@ -146,6 +146,8 @@ def linear_fit(bin_means):
     Returns:
         tuple: (slope, intercept, slope_error, intercept_error)
     """
+    if max_bin is not None:
+        bin_means = bin_means[bin_means["bin"] <= max_bin]
     x_data = bin_means["bin"]  # Bin indices (or centers if preferred)
     y_data = bin_means["mean_charge"]
     sigma_y = bin_means["sigma_mean"]  # Use uncertainties as weights
@@ -196,7 +198,7 @@ def linear_fit_full_data(binned_df, max_bin=None):
 
     return slope, intercept, slope_error, intercept_error
 
-def plot_binned_data(bin_means, slope, intercept):
+def plot_binned_data(bin_means, slope, intercept, max_bin = None):
     """
     Plots the binned charge data along with the linear regression fit.
 
@@ -205,6 +207,8 @@ def plot_binned_data(bin_means, slope, intercept):
         slope (float): Slope of the linear fit
         intercept (float): Intercept of the linear fit
     """
+    if max_bin is not None:
+        bin_means = bin_means[bin_means["bin"] <= max_bin]
     plt.errorbar(bin_means["bin"], bin_means["mean_charge"], yerr=bin_means["sigma_mean"], fmt='o', mfc='none',label="Binned Data")
     x_fit = np.linspace(min(bin_means["bin"]), max(bin_means["bin"]), 100)
     plt.plot(x_fit, slope * x_fit + intercept, label="Linear Fit", linestyle="--")
