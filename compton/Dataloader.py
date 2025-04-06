@@ -32,5 +32,5 @@ def expand_df(df, E, sig_E):
     """
     df["E/E'"] = df["Mean"]/E
     df["Unc E/E'"] = np.sqrt((df["Unc Mean"]/E)**2 + (df["Mean"]*sig_E/(E**2))**2)
-    df["1/cos(theta)"] = 1/np.cos(np.radians(df["Angle"]))
+    df["1-cos(theta)"] = 1-np.cos(np.radians(df["Angle"]))
     return df
