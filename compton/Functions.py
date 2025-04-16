@@ -3,6 +3,7 @@ import math
 import numpy as np
 from cavendish.utils.Functions import *
 from millikan.functions import *
+from scipy.special import erf
 
 def gaussian(x, a, mu, sigma):
     return a * np.exp(-((x - mu) ** 2) / (2 * sigma ** 2))
@@ -32,3 +33,6 @@ def logistic(x, a, b, c, d):
 
 def linear(x, m, b):
     return m * x + b
+
+def fit_erf(x, a, b, c, d):
+    return a * erf((x - d) / c) + b

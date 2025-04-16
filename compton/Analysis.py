@@ -78,6 +78,26 @@ def plot_guassian_fit(df, i=0, angle=0):
     plt.legend()
     plt.show()
 
+def error_fit(df):
+    #fits an error function to a dataframe containing the ROI for the compton edge
+    energy = df["Energy (keV)"].to_numpy()
+    counts = df["Counts"].to_numpy()
+    popt, pcov = curve_fit(fit_erf, energy, counts, p0=[max(counts), min(counts), 1, 475])
+    return popt, pcov
+
+def plot_error_fit(df):
+    #plots the error fit
+    popt, pcov = error_fit(df)
+    energy = df["Energy (keV)"].to_numpy()
+    counts = df["Counts"].to_numpy()
+    plt.plot(energy, counts, label="Raw Data")
+    plt.plot(energy, fit_erf(energy, *popt), label="Error Fit")
+    plt.title("Error Fit to Data")
+    plt.xlabel("Energy")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.show()
+
 def logistic_fit(df):
     #fits a logistic function to the data, returns parameters and cov matrix
     energy = df["Energy (keV)"].to_numpy()
