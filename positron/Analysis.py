@@ -1,6 +1,9 @@
 import pandas as pd
 import math
 import numpy as np
+from compton.Analysis import *
+from compton.Dataloader import *
+from compton.Functions import *
 from positron.Functions import *
 from cavendish.utils.Functions import *
 from compton.Functions import *
@@ -61,3 +64,17 @@ def total_counts(dfs):
     counts["Error"] = np.sqrt(counts["Counts"])
     counts = normalize_counts(counts)
     return counts
+
+
+def run_all_peak_fits(dfs):
+    #runs fits for all ROI peaks from Atotal dataframe, returns dataframe with statistics for the peaks
+    #args: dfs. this is a DICTIONARY of trimmed dataframes for each  ROI of the form {"ROI": dataframe}
+    rows= []
+    for roi, df in dfs.items():
+        popt, pcov = guassian_fit(df, p0_overide=([175,490,20,] if roi == "High" else None))
+        mean, sigma = popt[1], popt[2]
+        Unc_mean, Unc_sigma = np.sqrt(np.diag(pcov)[1:3])
+        rows.append({"ROI": roi, "Mean": mean, "Sigma": sigma, "Unc Mean": Unc_mean, "Unc Sigma": Unc_sigma})
+    peaks = pd.DataFrame(rows)
+    peaks.set_index("ROI", inplace=True)
+    return peaks

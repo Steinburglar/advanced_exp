@@ -9,10 +9,10 @@ def circles_overlap(angle, r1, r2, length):
     """
     d = d_from_angle(angle, length)
     if d>= r1 + r2:
-        print(f"No overlap at {angle} degrees")
+        #print(f"No overlap at {angle} degrees")
         return 0
     elif d <= np.abs(r1 - r2):
-        print(f"One circle is inside the other at {angle} degrees")
+        #print(f"One circle is inside the other at {angle} degrees")
         return math.pi * min(r1, r2)**2
     else:
         d1 = (r1**2 - r2**2 + d**2)/(2*d)
@@ -22,7 +22,7 @@ def circles_overlap(angle, r1, r2, length):
         term3 = d1 * math.sqrt(r1**2 - d1**2)
         term4 = d2 * math.sqrt(r2**2 - d2**2)
         area = term1 + term2 - term3 - term4
-        print(f"Overlap at {angle} degrees: {area}")
+        #print(f"Overlap at {angle} degrees: {area}")
         return area
 
 def d_from_angle(angle, length):
@@ -36,7 +36,7 @@ def d_from_angle(angle, length):
     d = length * math.tan(radians)
     return d
 
-def normalized_overlap(angle, r1=1.75, r2=0.6, length=30):
+def normalized_overlap(angle, r1=1.75, r2=0.6, length=50):
     """returns the normalized overlapping area of two circles of radius r1 and r2, wth a distance d between their centers
     """
     area = circles_overlap(angle, r1, r2, length)

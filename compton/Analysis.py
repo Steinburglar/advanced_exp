@@ -32,8 +32,13 @@ def plot_all_S1_fits(dfs):
     for i, angle in enumerate(range(0, 140, 10)):
         plot_guassian_fit(dfs[i], i, angle)
     
+def run_single_S1_fit(df, i=0, angle=0):
+    #essentially a function wrapper for running one at a time
+    dfs = [df]
+    return run_all_S1_fits(dfs)
+
 def run_all_S1_fits(dfs):
-    #runs all the fits from the dataframe
+    #runs all the fits from the dataframe, returns dataframe with statistics for the peaks
     rows= []
     for i, df in enumerate(dfs):
         popt, pcov = guassian_fit(df, i, i*10)
@@ -56,18 +61,26 @@ def trim_df(df, min_energy, max_energy=None):
     else:
         return df[(df["Energy (keV)"] > min_energy) & (df["Energy (keV)"] < max_energy)]
 
-def guassian_fit(df, i=0, angle=0):
+def guassian_fit(df, i=0, angle=0, p0_overide = None):
     #fits a guassian to the data, returns parameters and cov matrix
+    #should figure out why I added i to this, probably for compatability with an enumeration function
+    if type(angle) != int:
+        angle = 0
+        print("Angle not int, defaulting to 0")
     mins = minimum_energy_S1()
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
-    popt, pcov = curve_fit(gaussian, energy, counts, p0=[safe_divide(30000, angle), mins[i]+ 50, 100])
+    if p0_overide != None:
+        p0 = p0_overide
+    else:
+        p0=[safe_divide(30000, angle), mins[i]+ 50, 100]
+    popt, pcov = curve_fit(gaussian, energy, counts, p0=p0)
     return popt, pcov
 
-def plot_guassian_fit(df, i=0, angle=0):
+def plot_guassian_fit(df, i=0, angle=0, p0_overide = None):
     #plots the guassian fit
     #used to return data, now does not, as to prevent confusion. That was moved to run_all_S1_fits
-    popt, pcov= guassian_fit(df, i, angle)
+    popt, pcov= guassian_fit(df, i, angle, p0_overide=p0_overide)
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
     plt.plot(energy, counts, label=f"A{angle}")
@@ -138,6 +151,8 @@ def linear_fit_plot(peaks):
 
 
 
+def minimum_energy_positron_peaks():
+    return [185, 240, 460]
 
 def minimum_energy_S1():
     #returns handmade list of reasonable energy cutoffs to enable fits. note: only for S1 runs
