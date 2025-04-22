@@ -156,7 +156,7 @@ def minimum_energy_positron_peaks():
 
 def minimum_energy_S1():
     #returns handmade list of reasonable energy cutoffs to enable fits. note: only for S1 runs
-    return [650, 650, 650, 500, 450, 400, 350, 300, 280, 250, 240, 220, 220, 200]
+    return [650, 650, 600, 500, 450, 400, 350, 300, 280, 250, 240, 220, 220, 200]
 
 def maximum_energy_S1():
     #returns handmade list of reasonable energy cutoffs to enable fits. note: only for S1 runs

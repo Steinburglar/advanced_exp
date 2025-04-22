@@ -1,6 +1,7 @@
 import pandas as pd
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 from compton.Analysis import *
 from compton.Dataloader import *
 from compton.Functions import *
@@ -10,6 +11,19 @@ from compton.Functions import *
 from millikan.functions import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+
+
+def plot(df, title, x_label="Energy", y_label="Counts"):
+    #plots from the dataframe
+    energy = df["Energy (keV)"].to_numpy()
+    counts = df["Counts"].to_numpy()
+    plt.plot(energy, counts,)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.show()
+
 
 def plot_counts(df, Normalized = False, overlap=False):
     """Plots the counts as a function of angle.
@@ -65,16 +79,84 @@ def total_counts(dfs):
     counts = normalize_counts(counts)
     return counts
 
+def total_roi_counts(dfs):
+    #takes in a dictionary of dataframes for each ROI, returns a dataframe with the total counts at each ROI
+    
+    
+    
+    counts = {roi: df["Counts"].sum() for roi, df in dfs.items()} #create a dictionary from the dfs
+    counts = pd.DataFrame.from_dict(counts, orient='index', columns=["Counts"]) # create a dataframe from the dictionary
+    counts.index.name = "ROI" # set the index name to "Angle"
 
-def run_all_peak_fits(dfs):
+    counts["Error"] = np.sqrt(counts["Counts"])
+    return counts
+
+def run_all_peak_fits(dfs, p0_overide=None):
     #runs fits for all ROI peaks from Atotal dataframe, returns dataframe with statistics for the peaks
     #args: dfs. this is a DICTIONARY of trimmed dataframes for each  ROI of the form {"ROI": dataframe}
     rows= []
     for roi, df in dfs.items():
-        popt, pcov = guassian_fit(df, p0_overide=([175,490,20,] if roi == "High" else None))
+        popt, pcov = guassian_fit(df, p0_overide=([175,490,20,] if roi == "High" else p0_overide))
         mean, sigma = popt[1], popt[2]
         Unc_mean, Unc_sigma = np.sqrt(np.diag(pcov)[1:3])
         rows.append({"ROI": roi, "Mean": mean, "Sigma": sigma, "Unc Mean": Unc_mean, "Unc Sigma": Unc_sigma})
     peaks = pd.DataFrame(rows)
     peaks.set_index("ROI", inplace=True)
     return peaks
+
+def fit_plot_calibration(df, knowns):
+    #fits a line to the three known energy peaks to rescale the energy axis.
+    x = df["Mean"]
+    y = knowns
+    popt, pcov = curve_fit(linear, x, y,)
+    slope, intercept = popt
+    Unc_slope, Unc_intercept = np.sqrt(np.diag(pcov))
+    plt.plot(x, y, "o", label="Data")
+    x_ = np.linspace(min(x), max(x), 100)
+    plt.plot(x_, linear(x_, slope, intercept), label="Fit")
+    plt.show
+    return slope, intercept, Unc_slope, Unc_intercept
+    
+    
+def recalibrate_energy(df, mins, maxs):
+    #identifies peaks for know energy peaks, performs fit and recalibrates energy.
+    #returns dataframe with recalibrated energy
+    #args: df, dataframe with columns "Energy (keV)" and "Counts"
+    #       mins, list of minimum energies for each ROI
+    #       maxs, list of maximum energies for each ROI
+    
+    dfs = [trim_df(df, min_, max_) for min_, max_ in zip(mins, maxs)]
+    if len(dfs) == 2:
+        ROIs = {"Annihilation": dfs[0], "High": dfs[1]}
+        peaks = run_all_peak_fits(ROIs, p0_overide=[100, 250, 20])
+        display(peaks)
+        slope, intercept, sig_slope, sig_int = fit_plot_calibration(peaks, [511, 1274])
+    elif len(dfs) == 3:
+        ROIs = {"Annihilation": dfs[0], "Cesium": dfs[1], "High": dfs[2]}
+        peaks = run_all_peak_fits(ROIs)
+        slope, intercept, sig_slope, sig_int = fit_plot_calibration(peaks, [511, 662, 1274])
+    else:
+        raise ValueError("Invalid number of ROIs")
+    print(slope, intercept)
+    print(sig_slope, sig_int)
+    df["Energy (keV)"] = linear(df["Energy (keV)"], slope, intercept) #recalibrate energy
+    return df
+
+def time_normalize(rates):
+    #takes dataframes with rates at each ROI, normalizes by time of observation. should only be used once in analysis, in part 2 where we asses window inter val
+    rates["n1"] = rates["n1"] /(60*60)
+    rates["n1_error"] = rates["n1_error"] /(60*60)
+    rates["n2"] = rates["n2"] /(20*60)
+    rates["n2_error"] = rates["n2_error"] /(20*60)
+    rates["N_acc"] = rates["N_acc"] /(20*60)
+    rates["N_acc_error"] = rates["N_acc_error"] /(20*60)
+    return rates
+
+def window_error(n1, n2, n1_err, n2_err, N_acc, N_accerr):
+    #calculates the error in the window interval
+    #n1, n2, n1err, n2err, N_acc, N_accerr are all scalars
+    #returns the error in time window
+    term1 = np.square(N_acc*n1_err/(n1*n1*n2))
+    term2 = np.square(N_acc*n2_err/(n1*n2*n2))
+    term3 = np.square(N_accerr/(n1*n2))
+    return np.sqrt(term1 + term2 + term3)

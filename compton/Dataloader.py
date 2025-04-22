@@ -1,10 +1,11 @@
 import pandas as pd
 import math
 import numpy as np
+from compton.Functions import *
 from cavendish.utils.Functions import *
 from millikan.functions import *
 
-def load_gamma_count(csv_path):
+def load_gamma_count(csv_path, rescale=None):
     """
     Loads gamma count data from CSV file into a dataframe
     
@@ -18,6 +19,8 @@ def load_gamma_count(csv_path):
     # df = pd.read_csv(csv_path, header=6, skiprows=[0,1,2,3,4,5], usecols=[0,1,2])
     
     df = pd.read_csv(csv_path, skiprows=7, names=["Channel", "Energy (keV)", "Counts"])
+    if rescale is not None:
+        df["Energy (keV)"] = linear(df["Energy (keV)"], rescale[0], rescale[1])
     
     return df
 
