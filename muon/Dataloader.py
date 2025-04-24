@@ -13,18 +13,22 @@ from positron.Analysis import *
 from positron.Dataloader import *
 
 
-def load_AB_txt(rel_path):
+def load_ABT_txt(rel_path):
     """
     loads AB coincidence data from txt file
     """
-    return
+    df = pd.read_csv(rel_path, sep="\t")
+    df.set_index("Voltage", inplace=True)
+    return df
 
 def load_muon_decay_txt(rel_path):
     """
     loads muon decay data from txt file
     """
-    df = pd.read_csv(rel_path, sep="\t", header=None, names=["time (ns)", "count"])
-    df = df.set_index("time (ns)")
+    df = pd.read_csv(rel_path, sep="\t", header=None, names=["Channel", "count"])
+    df["time (microseconds)"] = df["Channel"] * (8/1000)
+    df = df.set_index("time (microseconds)")
+    df.drop(columns=["Channel"], inplace=True)
     df = df.iloc[10:]
     
     return df

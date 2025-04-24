@@ -1,4 +1,4 @@
-Voltage	AáB	AáBáT
+Voltage	A*B	A*B*T
 500	1118	4
 550	1049	1
 600	1092	3
