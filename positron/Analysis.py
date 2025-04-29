@@ -149,14 +149,14 @@ def recalibrate_energy(df, mins, maxs):
     df["Energy (keV)"] = linear(df["Energy (keV)"], slope, intercept) #recalibrate energy
     return df
 
-def time_normalize(rates):
+def time_normalize(rates, gate_length):
     #takes dataframes with rates at each ROI, normalizes by time of observation. should only be used once in analysis, in part 2 where we asses window inter val
-    rates["n1"] = rates["n1"]*1200 /(6757.0260)
-    rates["n1_error"] = rates["n1_error"]*1200 /(6757.0260)
-    rates["n2"] = rates["n2"]*1200 /(300)
-    rates["n2_error"] = rates["n2_error"]*1200 /(300)
-    rates["N_acc"] = rates["N_acc"]
-    rates["N_acc_error"] = rates["N_acc_error"]
+    rates["n1"] = rates["n1"]/(6757.02) #normalize by the time of observation, to get hz
+    rates["n1_error"] = rates["n1_error"]/(6757.02) #normalize by the time of observation
+    rates["n2"] = rates["n2"]/(300)
+    rates["n2_error"] = rates["n2_error"]/(300)
+    rates["N_acc"] = rates["N_acc"]/1200
+    rates["N_acc_error"] = rates["N_acc_error"]/1200
     return rates
 
 def window_error(n1, n2, n1_err, n2_err, N_acc, N_accerr):
