@@ -43,10 +43,15 @@ def plot_counts(df, Normalized = False, overlap=False):
     plt.title("Counts vs Angle")
     
     if overlap:
-        #plot the overlap
+        #find the normalization area for overlap
+        x = np.arange(-6, 7, 1)
+        discrete_overlap = [area_overlap(angle) for angle in x]
+        area = np.sum(discrete_overlap)
+        #normalize the overlap
+        
         x = np.linspace(-6, 6, 100)
-        overlap = [normalized_overlap(angle) for angle in x]
-        plt.plot(x, overlap, label="Overlap", color="red")
+        normalized_overlap = [area_overlap(angle)/area for angle in x]
+        plt.plot(x, normalized_overlap, label="Overlap", color="red")
         plt.legend()
     
     plt.show()
@@ -54,7 +59,7 @@ def plot_counts(df, Normalized = False, overlap=False):
     
 
 def normalize_counts(df):
-    """Normalizes the counts in a DataFrame to the maximum count.
+    """Normalizes the counts in a DataFrame to the area.
 
     Args:
         df (pd.DataFrame): dataframe with columns "angle" and "counts".
@@ -62,10 +67,9 @@ def normalize_counts(df):
     Returns:
         pd.DataFrame: input dataframe with new collumn of normalized counts, and normalized errors
     """
-    max_count = df["Counts"].max()
-    print(max_count)
-    df["normalized_counts"] = df["Counts"] / max_count
-    df["normalized_error"] = df["Error"] / max_count
+    area = df["Counts"].sum()
+    df["normalized_counts"] = df["Counts"] / area
+    df["normalized_error"] = df["Error"] / area
     return df
 
 
@@ -96,7 +100,10 @@ def run_all_peak_fits(dfs, p0_overide=None):
     #args: dfs. this is a DICTIONARY of trimmed dataframes for each  ROI of the form {"ROI": dataframe}
     rows= []
     for roi, df in dfs.items():
-        popt, pcov = guassian_fit(df, p0_overide=([175,490,20,] if roi == "High" else p0_overide))
+        p0_overide = [1000, 250, 20] if roi == "Annihilation" else p0_overide
+        p0_overide = [500, 260, 20] if roi == "Cesium" else p0_overide
+        p0_overide = [175, 490, 20] if roi == "High" else p0_overide
+        popt, pcov = guassian_fit(df, p0_overide=p0_overide)
         mean, sigma = popt[1], popt[2]
         Unc_mean, Unc_sigma = np.sqrt(np.diag(pcov)[1:3])
         rows.append({"ROI": roi, "Mean": mean, "Sigma": sigma, "Unc Mean": Unc_mean, "Unc Sigma": Unc_sigma})
@@ -106,7 +113,7 @@ def run_all_peak_fits(dfs, p0_overide=None):
 
 def fit_plot_calibration(df, knowns):
     #fits a line to the three known energy peaks to rescale the energy axis.
-    x = df["Mean"]
+    x = df["Mean"].to_numpy()
     y = knowns
     popt, pcov = curve_fit(linear, x, y,)
     slope, intercept = popt
@@ -119,7 +126,7 @@ def fit_plot_calibration(df, knowns):
     
     
 def recalibrate_energy(df, mins, maxs):
-    #identifies peaks for know energy peaks, performs fit and recalibrates energy.
+    #identifies peaks for known energy peaks, performs fit and recalibrates energy.
     #returns dataframe with recalibrated energy
     #args: df, dataframe with columns "Energy (keV)" and "Counts"
     #       mins, list of minimum energies for each ROI
@@ -144,12 +151,12 @@ def recalibrate_energy(df, mins, maxs):
 
 def time_normalize(rates):
     #takes dataframes with rates at each ROI, normalizes by time of observation. should only be used once in analysis, in part 2 where we asses window inter val
-    rates["n1"] = rates["n1"] /(60*60)
-    rates["n1_error"] = rates["n1_error"] /(60*60)
-    rates["n2"] = rates["n2"] /(20*60)
-    rates["n2_error"] = rates["n2_error"] /(20*60)
-    rates["N_acc"] = rates["N_acc"] /(20*60)
-    rates["N_acc_error"] = rates["N_acc_error"] /(20*60)
+    rates["n1"] = rates["n1"]*1200 /(6757.0260)
+    rates["n1_error"] = rates["n1_error"]*1200 /(6757.0260)
+    rates["n2"] = rates["n2"]*1200 /(300)
+    rates["n2_error"] = rates["n2_error"]*1200 /(300)
+    rates["N_acc"] = rates["N_acc"]
+    rates["N_acc_error"] = rates["N_acc_error"]
     return rates
 
 def window_error(n1, n2, n1_err, n2_err, N_acc, N_accerr):

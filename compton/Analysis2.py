@@ -1,14 +1,15 @@
 import pandas as pd
 import math
 import numpy as np
+from numpy.polynomial import Polynomial
 from cavendish.utils.Functions import *
 from compton.Functions import *
 from millikan.functions import *
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize_scalar
 
 
-def plot_raw(df, angle, x_label="Bin", y_label="Counts"):
+def plot_raw(df, angle, x_label="Energy", y_label="Counts"):
     #plots from the dataframe
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
@@ -20,7 +21,7 @@ def plot_raw(df, angle, x_label="Bin", y_label="Counts"):
     plt.show()
     
     
-def plot_all(dfs, mins,):
+def plot_all(dfs, mins=None):
     #plots all the data from the dataframe
     
     for i, angle in enumerate(range(0, 140, 10)):
@@ -28,28 +29,54 @@ def plot_all(dfs, mins,):
             plt.axvline(x=mins[i], color='r', linestyle='--')
         plot_raw(dfs[i], angle)
         
-def plot_all_S1_fits(dfs):
+def plot_all_S1_poly_fits(dfs):
     #plots all the fits from the dataframe
     #used to also return the peaks, but that was removed to prevent confusion. data returning functionality is provided in run_all_S1_fits
     for i, angle in enumerate(range(0, 140, 10)):
-        plot_guassian_fit(dfs[i], i, angle)
+        plot_poly_fit(dfs[i], i, angle)
     
 def run_single_S1_fit(df, i=0, angle=0):
     #essentially a function wrapper for running one at a time
     dfs = [df]
-    return run_all_S1_fits(dfs)
+    return run_all_S1_poly_fits(dfs)
 
-def run_all_S1_fits(dfs):
+def run_all_S1_guassian_fits(dfs):
     #runs all the fits from the dataframe, returns dataframe with statistics for the peaks
     rows= []
     for i, df in enumerate(dfs):
         popt, pcov = guassian_fit(df, i, i*10)
         mean, sigma = popt[1], popt[2]
-        print()
         Unc_mean, Unc_sigma = np.sqrt(np.diag(pcov)[1:3])
         rows.append({"Angle": i*10, "Mean": mean, "Sigma": sigma, "Unc Mean": Unc_mean, "Unc Sigma": Unc_sigma})
     peaks = pd.DataFrame(rows)
     return peaks
+
+def run_all_S1_poly_fits(dfs):
+    #runs all the fits from the dataframe, returns dataframe with statistics for the peaks
+    rows= []
+    for i, df in enumerate(dfs):
+        xmin = df["Energy (keV)"].min()
+        
+        xmax= df["Energy (keV)"].max()
+        coef, cov = poly_fit(df)
+        S = np.random.multivariate_normal(coef, cov, size=10000)
+        peaks = []
+        for p in S:
+            # find roots of the derivative:
+            dP = np.polyder(p)           # derivative coefficients
+            rts = np.roots(dP)
+            # pick the real root in your fit‐window:
+            real = rts[np.isreal(rts)].real
+            sel = real[(real>=xmin)&(real<=xmax)]
+            peaks.append(sel[0])         # or choose the global maximum, etc.
+    
+        mean_peak = np.mean(peaks)    
+        sigma_peak = np.std(peaks)
+        rows.append({"Angle": i*10, "Mean": mean_peak, "Unc Mean": sigma_peak})
+
+    peaks = pd.DataFrame(rows)
+    return peaks
+
 def trim_S1_dfs(dfs, mins, maxs):
     #trims the dataframes to the minimum energy
     trimmed = []
@@ -70,15 +97,34 @@ def guassian_fit(df, i=0, angle=0, p0_overide = None):
     if type(angle) != int:
         angle = 0
         print("Angle not int, defaulting to 0")
-    mins = minimum_energy_S1() #used for getting parameter estimates
+    mins = minimum_energy_S1()
     energy = df["Energy (keV)"].to_numpy()
     counts = df["Counts"].to_numpy()
     if p0_overide != None:
         p0 = p0_overide
     else:
-        p0=[safe_divide(20000, angle), mins[i], 50]
-    popt, pcov = curve_fit(gaussian, energy, counts, p0=p0, maxfev= 1000)#last two terms are for linear modification
+        p0=[safe_divide(30000, angle), mins[i]+ 50, 100]
+    popt, pcov = curve_fit(gaussian, energy, counts, p0=p0)#last two terms are for linear modification
     return popt, pcov
+
+def poly_fit(df):
+    #fits a polynomial to the data, returns parameters and cov matrix
+    #should figure out why I added i to this, probably for compatability with an enumeration function
+    x = df["Energy (keV)"].to_numpy()
+    y = df["Counts"].to_numpy()
+    
+    x0 = x.mean()
+    scale = (x.max() - x.min())/2
+
+    x_scaled = (x - x0) / scale 
+    # Fit polynomial to scaled x
+    coeffs_scaled, cov_scaled = np.polyfit(x_scaled, y, deg=5, cov = True)
+    p_scaled = np.poly1d(coeffs_scaled)
+    transform = np.poly1d([1/scale, -x0/scale])
+    p_original = p_scaled(transform)
+    # Transform coefficients back to original scale
+    coeffs_original = p_original.coeffs
+    return coeffs_original, cov_scaled
 
 def plot_guassian_fit(df, i=0, angle=0, p0_overide = None):
     #plots the guassian fit
@@ -89,6 +135,21 @@ def plot_guassian_fit(df, i=0, angle=0, p0_overide = None):
     plt.plot(energy, counts, label=f"A{angle}")
     plt.plot(energy, gaussian(energy, *popt), label=f"A{angle} Fit")
     plt.title(f"A{angle} Guassian Fit")
+    plt.xlabel("Energy")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.show()
+
+def plot_poly_fit(df, i=0, angle=0):
+    #plots the polynomial fit
+    #used to return data, now does not, as to prevent confusion. That was moved to run_all_S1_fits
+    coef, cov= poly_fit(df)
+    energy = df["Energy (keV)"].to_numpy()
+    counts = df["Counts"].to_numpy()
+    polyfunc = np.poly1d(coef)
+    plt.plot(energy, counts, label=f"A{angle}")
+    plt.plot(energy, polyfunc(energy), label=f"A{angle} Fit")
+    plt.title(f"A{angle} Polynomial Fit")
     plt.xlabel("Energy")
     plt.ylabel("Counts")
     plt.legend()
@@ -111,7 +172,7 @@ def plot_error_fit(df):
     plt.plot(energy, counts, label="Raw Data")
     plt.plot(energy, fit_erf(energy, *popt), label="Error Fit")
     plt.title("Error Fit to Data")
-    plt.xlabel("Channel")
+    plt.xlabel("Energy")
     plt.ylabel("Counts")
     plt.legend()
     plt.show()
@@ -154,19 +215,6 @@ def linear_fit_plot(peaks):
     plt.show()
     return slope, unc_slope, intercept, unc_intercept
 
-
-def compton_calibration(df, known):
-    #fits a line to the three known energy peaks to rescale the energy axis.
-    x = [9, df["Mean"][0]]
-    y = [0, known]
-    popt, pcov = curve_fit(linear, x, y,)
-    slope, intercept = popt
-    Unc_slope, Unc_intercept = np.sqrt(np.diag(pcov))
-    plt.plot(x, y, "o", label="Data")
-    x_ = np.linspace(min(x), max(x), 100)
-    plt.plot(x_, linear(x_, slope, intercept), label="Fit")
-    plt.show
-    return slope, intercept, Unc_slope, Unc_intercept
 
 
 def minimum_energy_positron_peaks():

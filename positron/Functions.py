@@ -36,10 +36,11 @@ def d_from_angle(angle, length):
     d = length * math.tan(radians)
     return d
 
-def normalized_overlap(angle, r1=1.75, r2=0.6, length=50):
-    """returns the normalized overlapping area of two circles of radius r1 and r2, wth a distance d between their centers
+def area_overlap(angle, r1=2.35, r2=0.95, length_1=44.45, length_2=23.9):
+    """returns the non-normalized overlapping area of two circles of radius r1 and r2, wth a distance d between their centers
     """
-    area = circles_overlap(angle, r1, r2, length)
-    norm_area = area / (math.pi * min(r1, r2)**2)
-    return norm_area
+    ratio = length_1 / length_2
+    r2_scaled = 1.57#r2 * ratio
+    area = circles_overlap(angle, r1, r2_scaled, length_1,)
+    return area
 

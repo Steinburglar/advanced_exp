@@ -8,6 +8,9 @@ from scipy.special import erf
 def gaussian(x, a, mu, sigma):
     return a * np.exp(-((x - mu) ** 2) / (2 * sigma ** 2))
 
+def modified_gaussian(x, a, mu, sigma, b):
+    return (a * np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) )+ b
+
 def compton_edge(E_gamma, m_e=511):
     return E_gamma / (1 + (E_gamma / (2 * m_e)))
 
