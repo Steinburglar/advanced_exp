@@ -80,7 +80,7 @@ def guassian_fit(df, i=0, angle=0, p0_overide = None):
     popt, pcov = curve_fit(gaussian, energy, counts, p0=p0, maxfev= 1000)#last two terms are for linear modification
     return popt, pcov
 
-def plot_guassian_fit(df, i=0, angle=0, p0_overide = None):
+def plot_guassian_fit(df, i=0, angle=0, p0_overide = None,channel=False):
     #plots the guassian fit
     #used to return data, now does not, as to prevent confusion. That was moved to run_all_S1_fits
     popt, pcov= guassian_fit(df, i, angle, p0_overide=p0_overide)
@@ -90,6 +90,8 @@ def plot_guassian_fit(df, i=0, angle=0, p0_overide = None):
     plt.plot(energy, gaussian(energy, *popt), label=f"A{angle} Fit")
     plt.title(f"A{angle} Guassian Fit")
     plt.xlabel("Energy")
+    if channel:
+        plt.xlabel("Channel")
     plt.ylabel("Counts")
     plt.legend()
     plt.show()

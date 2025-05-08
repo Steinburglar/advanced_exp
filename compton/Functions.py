@@ -39,3 +39,17 @@ def linear(x, m, b):
 
 def fit_erf(x, a, b, c, d):
     return a * erf((x - d) / c) + b
+
+def mass_from_slope(slope, E=0.662):
+    """Calculates the mass from the slope of the line and the energy.
+
+    Args:
+        slope (ufloat): ufloat containing slope and slope uncertainty
+        E (float): _description_
+        
+    returns mass in MeV
+    """
+    E = E * 1.602176634e-13 # convert to Joules
+    m = E/(slope) * 6.241509074e12 # convert to MeV
+
+    return m
